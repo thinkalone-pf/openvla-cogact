@@ -119,10 +119,16 @@ class HFCausalLLMBackbone(LLMBackbone, ABC):
         #   => Note: We're eschewing use of the AutoModel API so that we can be more explicit about LLM-specific details
         if not self.inference_mode:
             overwatch.info(f"Loading [bold]{llm_family}[/] LLM from [underline]`{hf_hub_path}`[/]", ctx_level=1)
+            # transformers v5 dropped the `use_flash_attention_2` boolean in favour of the
+            # `attn_implementation` selector. Translate the existing flag at call time so
+            # the subclass interfaces stay unchanged.
+            from_pretrained_kwargs = {}
+            if use_flash_attention_2 and not self.inference_mode:
+                from_pretrained_kwargs["attn_implementation"] = "flash_attention_2"
             self.llm = llm_cls.from_pretrained(
                 hf_hub_path,
                 token=hf_token,
-                use_flash_attention_2=use_flash_attention_2 if not self.inference_mode else False,
+                **from_pretrained_kwargs,
                 # The following parameters are set to prevent `UserWarnings` from HF; we want greedy decoding!
                 do_sample=False,
                 temperature=1.0,
