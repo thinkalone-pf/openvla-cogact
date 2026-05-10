@@ -125,15 +125,19 @@ class HFCausalLLMBackbone(LLMBackbone, ABC):
             from_pretrained_kwargs = {}
             if use_flash_attention_2 and not self.inference_mode:
                 from_pretrained_kwargs["attn_implementation"] = "flash_attention_2"
+            # transformers v5 stopped accepting `do_sample` / `temperature` / `top_p`
+            # directly on from_pretrained() (they live on GenerationConfig now). Drop
+            # them from the call and apply the greedy-decoding overrides on the
+            # generation_config attribute after the model is loaded.
             self.llm = llm_cls.from_pretrained(
                 hf_hub_path,
                 token=hf_token,
                 **from_pretrained_kwargs,
-                # The following parameters are set to prevent `UserWarnings` from HF; we want greedy decoding!
-                do_sample=False,
-                temperature=1.0,
-                top_p=1.0,
             )
+            if getattr(self.llm, "generation_config", None) is not None:
+                self.llm.generation_config.do_sample = False
+                self.llm.generation_config.temperature = 1.0
+                self.llm.generation_config.top_p = 1.0
 
         # [Contract] `inference_mode` means we're loading from a pretrained checkpoint; no need to load base weights!
         else:
