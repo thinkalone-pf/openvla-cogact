@@ -129,9 +129,16 @@ class HFCausalLLMBackbone(LLMBackbone, ABC):
             # directly on from_pretrained() (they live on GenerationConfig now). Drop
             # them from the call and apply the greedy-decoding overrides on the
             # generation_config attribute after the model is loaded.
+            #
+            # transformers v5 also changed the default load dtype: if the model
+            # config carries `torch_dtype` (Llama-2 ships with float16) the weights
+            # are now loaded in that dtype rather than upcast to fp32. CogACT's
+            # training script asserts fp32 after VLM load, so we pin dtype=fp32
+            # explicitly to match the v4 default and the downstream invariant.
             self.llm = llm_cls.from_pretrained(
                 hf_hub_path,
                 token=hf_token,
+                dtype=torch.float32,
                 **from_pretrained_kwargs,
             )
             if getattr(self.llm, "generation_config", None) is not None:
