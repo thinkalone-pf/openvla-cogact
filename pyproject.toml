@@ -49,9 +49,13 @@ dependencies = [
     "torchaudio",
     "transformers>=5.5.0,<5.6.0",
     "wandb",
-    "tensorflow==2.15.0",
+    # tensorflow 2.16 is the first release with cp312 wheels; the previous 2.15
+    # pin blocked downstream consumers (cogact) that need Python 3.12 to pick up
+    # the FSDP writeback fix in torch 2.9 + flash-attn 2.8.3 cp312 wheels.
+    "tensorflow>=2.16.2,<3.0",
     "tensorflow_datasets==4.9.3",
-    "tensorflow_graphics==2021.12.3",
+    # tensorflow_graphics dropped: unused by openvla; its only release pulls in
+    # tensorflow-addons, which has no cp312 wheels and so blocks Python 3.12.
     "dlimp @ git+https://github.com/moojink/dlimp_openvla"
 ]
 
