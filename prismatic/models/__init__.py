@@ -17,7 +17,10 @@ _EXPORTS = {
 def __getattr__(name):
     if name not in _EXPORTS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    # Importing `.load` binds the submodule to `load` here; the assignment below replaces it with the function.
-    value = getattr(importlib.import_module(_EXPORTS[name], __name__), name)
-    globals()[name] = value
-    return value
+    # Importing `.load` binds the submodule to `load` here, so every name of the submodule is bound at once (which
+    # replaces it with the function), whichever name is accessed first.
+    module = importlib.import_module(_EXPORTS[name], __name__)
+    for export, source in _EXPORTS.items():
+        if source == _EXPORTS[name]:
+            globals()[export] = getattr(module, export)
+    return globals()[name]
